@@ -52,8 +52,9 @@ Use null if missing.
       counterparty: result.counterparty ?? null,
     };
 
-    db.run(
-      `UPDATE jobs SET
+    db.prepare(
+      `
+      UPDATE jobs SET
         status = 'complete',
         document_type = ?,
         confidence = ?,
@@ -61,23 +62,24 @@ Use null if missing.
         page_count = ?,
         processing_time_ms = ?,
         error = null
-       WHERE job_id = ?`,
-      [
-        result.document_type ?? null,
-        result.confidence ?? null,
-        JSON.stringify(extractedFields),
-        pdf.numpages,
-        processingTime,
-        jobId,
-      ],
+      WHERE job_id = ?
+    `,
+    ).run(
+      result.document_type ?? null,
+      result.confidence ?? null,
+      JSON.stringify(extractedFields),
+      pdf.numpages,
+      processingTime,
+      jobId,
     );
 
     console.log("Done:", jobId);
   } catch (err) {
     console.error("Failed:", jobId, err.message);
 
-    db.run(
-      `UPDATE jobs SET
+    db.prepare(
+      `
+      UPDATE jobs SET
         status = 'failed',
         document_type = null,
         confidence = null,
@@ -85,16 +87,16 @@ Use null if missing.
         page_count = null,
         processing_time_ms = null,
         error = ?
-       WHERE job_id = ?`,
-      [
-        JSON.stringify({
-          document_date: null,
-          total_amount: null,
-          counterparty: null,
-        }),
-        err.message,
-        jobId,
-      ],
+      WHERE job_id = ?
+    `,
+    ).run(
+      JSON.stringify({
+        document_date: null,
+        total_amount: null,
+        counterparty: null,
+      }),
+      err.message,
+      jobId,
     );
   }
 }
